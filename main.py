@@ -41,7 +41,7 @@ def check_password(message):
     global is_admin
     if message.text == admin_password:
         is_admin = True
-        bot.send_message(message.chat.id, 'Вы вошли в админ-панель. Чтобы изменить расписание, используйте команды "Редактировать(день)" и "Сохранить расписание".')
+        bot.send_message(message.chat.id, 'Вы вошли в админ-панель. Чтобы изменить расписание, используйте команды "Редактировать(день)", "Добавить(день)" и "Удалить(день)", а также "Сохранить расписание".')
     else:
         bot.send_message(message.chat.id, 'Неверный пароль.')
 
@@ -58,6 +58,25 @@ def update_schedule(message, day):
     new_schedule = message.text.split(',')
     schedule[day] = [item.strip() for item in new_schedule]
     bot.send_message(message.chat.id, 'Расписание изменено!')
+
+@bot.message_handler(func=lambda message: message.text.startswith('Добавить') and is_admin)
+def add_day(message):
+    new_day = message.text.split(' ')[1]
+    if new_day not in schedule:
+        schedule[new_day] = []
+        bot.send_message(message.chat.id, f'День {new_day} добавлен в расписание. Введите расписание для этого дня через запятую:')
+        bot.register_next_step_handler(message, update_schedule, new_day)
+    else:
+        bot.send_message(message.chat.id, 'Такой день уже существует.')
+
+@bot.message_handler(func=lambda message: message.text.startswith('Удалить') and is_admin)
+def remove_day(message):
+    day = message.text.split(' ')[1]
+    if day in schedule:
+        del schedule[day]
+        bot.send_message(message.chat.id, f'День {day} удален из расписания!')
+    else:
+        bot.send_message(message.chat.id, 'Такого дня не существует.')
 
 @bot.message_handler(func=lambda message: message.text == "Сохранить расписание" and is_admin)
 def save_schedule(message):
@@ -77,23 +96,28 @@ def show_menu(message):
     markup.add("Понедельник", "Среда", "Пятница", "Обратно")
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
+
 @bot.message_handler(func=lambda message: message.text == "Обратно")
 def go_back(message):
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Информация", "Расписание", "Связь", "Вход в админ панель")
     bot.send_message(message.chat.id, 'Выбери опцию ниже:', reply_markup=markup)
 
+
 @bot.message_handler(func=lambda message: message.text == "Понедельник")
 def monday(message):
     bot.send_message(message.chat.id, '• Понедельник\n' + '\n'.join(schedule["Понедельник"]))
+
 
 @bot.message_handler(func=lambda message: message.text == "Среда")
 def wednesday(message):
     bot.send_message(message.chat.id, '• Среда\n' + '\n'.join(schedule["Среда"]))
 
+
 @bot.message_handler(func=lambda message: message.text == "Пятница")
 def friday(message):
     bot.send_message(message.chat.id, '• Пятница\n' + '\n'.join(schedule["Пятница"]))
+
 
 print("Запущен!")
 bot.infinity_polling()
